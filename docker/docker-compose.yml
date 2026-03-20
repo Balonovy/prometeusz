@@ -1,0 +1,101 @@
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: uvicorn interfaces.api.main:app --host 0.0.0.0 --port 8000
+    ports: ["8000:8000"]
+    environment: ["PYTHONPATH=/app", "MOCK_LLM=true", "REDIS_URL=redis://redis:6379/0"]
+    depends_on: [redis]
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: "50m", max-file: "3"}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:8000/health || exit 1"], interval: 30s, timeout: 10s, retries: 3}
+    volumes: [sqlite_data:/app/data, logs_data:/app/logs]
+    networks: [prometeusz_net]
+
+  agent:
+    build: {context: .., dockerfile: docker/Dockerfile}
+    command: python -m core.ai_module.agent
+    depends_on: [api, redis]
+    restart: unless-stopped
+    environment: ["AGENT_MODE=autonomous", "PYTHONPATH=/app", "REDIS_URL=redis://redis:6379/0"]
+    logging: {driver: json-file, options: {max-size: "50m", max-file: "3"}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://api:8000/health || exit 1"], interval: 30s, timeout: 10s, retries: 3}
+    volumes: [sqlite_data:/app/data, logs_data:/app/logs]
+    networks: [prometeusz_net]
+
+  watchdog:
+    build: {context: .., dockerfile: docker/Dockerfile}
+    command: python -m neural_os.watchdog
+    depends_on: [api, redis]
+    restart: unless-stopped
+    environment: ["PYTHONPATH=/app", "REDIS_URL=redis://redis:6379/0"]
+    logging: {driver: json-file, options: {max-size: "50m", max-file: "3"}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://api:8000/health || exit 1"], interval: 30s, timeout: 10s, retries: 3}
+    volumes: [sqlite_data:/app/data, logs_data:/app/logs]
+    networks: [prometeusz_net]
+
+  learner:
+    build: {context: .., dockerfile: docker/Dockerfile}
+    command: python -c "from interfaces.api.dependencies import get_app_container; import asyncio; c=get_app_container(); asyncio.run(c.startup()); asyncio.run(c.live_learner.run())"
+    depends_on: [api, redis]
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: "50m", max-file: "3"}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://api:8000/health || exit 1"], interval: 30s, timeout: 10s, retries: 3}
+    volumes: [sqlite_data:/app/data, logs_data:/app/logs]
+    networks: [prometeusz_net]
+
+  reflector:
+    build: {context: .., dockerfile: docker/Dockerfile}
+    command: python -c "from interfaces.api.dependencies import get_app_container; import asyncio; c=get_app_container(); asyncio.run(c.startup()); asyncio.run(c.reflection_engine.reflect_on_cycle('boot'))"
+    depends_on: [api, redis]
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: "50m", max-file: "3"}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://api:8000/health || exit 1"], interval: 30s, timeout: 10s, retries: 3}
+    volumes: [sqlite_data:/app/data, logs_data:/app/logs]
+    networks: [prometeusz_net]
+
+  encoder:
+    build: {context: .., dockerfile: docker/Dockerfile}
+    command: python -c "from interfaces.api.dependencies import get_app_container; import asyncio; c=get_app_container(); asyncio.run(c.startup()); asyncio.run(c.market_encoder.run())"
+    depends_on: [api, redis]
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: "50m", max-file: "3"}}
+    healthcheck: {test: ["CMD-SHELL", "wget -qO- http://api:8000/health || exit 1"], interval: 30s, timeout: 10s, retries: 3}
+    volumes: [sqlite_data:/app/data, logs_data:/app/logs]
+    networks: [prometeusz_net]
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--maxmemory", "1gb", "--maxmemory-policy", "allkeys-lru"]
+    ports: ["6379:6379"]
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: "50m", max-file: "3"}}
+    volumes: [redis_data:/data]
+    networks: [prometeusz_net]
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: "50m", max-file: "3"}}
+    volumes: [logs_data:/prometheus]
+    networks: [prometeusz_net]
+
+  grafana:
+    image: grafana/grafana:latest
+    ports: ["3000:3000"]
+    restart: unless-stopped
+    logging: {driver: json-file, options: {max-size: "50m", max-file: "3"}}
+    volumes: [logs_data:/var/lib/grafana, ./docker/grafana/dashboards:/etc/grafana/provisioning/dashboards]
+    networks: [prometeusz_net]
+
+volumes:
+  redis_data:
+  sqlite_data:
+  logs_data:
+
+networks:
+  prometeusz_net:
+    driver: bridge
+    ipam:
+      config: [{subnet: "172.20.0.0/16"}]

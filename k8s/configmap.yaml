@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometeusz-config
+  namespace: prometeusz
+data:
+  MOCK_LLM: "true"
+  PYTHONPATH: "/app"
+  REDIS_URL: "redis://prometeusz-redis:6379/0"

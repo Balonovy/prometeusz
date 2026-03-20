@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: prometeusz-watchdog, namespace: prometeusz}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: prometeusz-watchdog}}
+  template:
+    metadata: {labels: {app: prometeusz-watchdog}}
+    spec:
+      containers:
+        - name: prometeusz-watchdog
+          image: prometeusz:latest
+          command: ["python", "-m", "neural_os.watchdog"]
+          envFrom:
+        - configMapRef: {name: prometeusz-config}
+        - secretRef: {name: prometeusz-secrets}
+          resources: {requests: {cpu: "500m", memory: "512Mi"}, limits: {cpu: "2000m", memory: "2Gi"}}
