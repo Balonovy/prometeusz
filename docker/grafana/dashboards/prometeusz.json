@@ -1,0 +1,1 @@
+{"title":"PROMETEUSZ","panels":[{"title":"Agent decisions timeline","type":"timeseries"},{"title":"Quantum energy convergence","type":"timeseries"},{"title":"Portfolio Sharpe ratio","type":"gauge"},{"title":"Per-pair signal heatmap","type":"heatmap"},{"title":"System health matrix","type":"table"},{"title":"Learning reward trend","type":"timeseries"}]}

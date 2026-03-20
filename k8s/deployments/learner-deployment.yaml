@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: prometeusz-learner, namespace: prometeusz}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: prometeusz-learner}}
+  template:
+    metadata: {labels: {app: prometeusz-learner}}
+    spec:
+      containers:
+        - name: prometeusz-learner
+          image: prometeusz:latest
+          command: ["python", "-c", "from interfaces.api.dependencies import get_app_container; import asyncio; c=get_app_container(); asyncio.run(c.startup()); asyncio.run(c.live_learner.run())"]
+          envFrom:
+        - configMapRef: {name: prometeusz-config}
+        - secretRef: {name: prometeusz-secrets}
+          resources: {requests: {cpu: "500m", memory: "512Mi"}, limits: {cpu: "2000m", memory: "2Gi"}}
