@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: prometeusz
+  namespace: prometeusz
+spec:
+  rules:
+    - host: prometeusz.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: prometeusz-api
+                port:
+                  number: 80

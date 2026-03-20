@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometeusz-agent
+  namespace: prometeusz
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: prometeusz-agent}
+  template:
+    metadata:
+      labels: {app: prometeusz-agent}
+    spec:
+      containers:
+        - name: agent
+          image: prometeusz:latest
+          command: ["python", "-m", "core.ai_module.agent"]
+          envFrom:
+            - configMapRef: {name: prometeusz-config}
+            - secretRef: {name: prometeusz-secrets}
+          resources:
+            requests: {cpu: "1000m", memory: "1Gi"}
+            limits: {cpu: "4000m", memory: "4Gi"}

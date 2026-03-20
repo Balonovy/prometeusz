@@ -1,0 +1,17 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometeusz-encoder
+  namespace: prometeusz
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {app: prometeusz-encoder}
+  template:
+    metadata:
+      labels: {app: prometeusz-encoder}
+    spec:
+      containers:
+        - name: encoder
+          image: prometeusz:latest
+          command: ["python", "-c", "from interfaces.api.dependencies import get_app_container; import asyncio; c=get_app_container(); asyncio.run(c.startup()); asyncio.run(c.market_encoder.run())"]

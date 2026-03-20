@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometeusz-api
+  namespace: prometeusz
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  selector:
+    matchLabels: {app: prometeusz-api}
+  template:
+    metadata:
+      labels: {app: prometeusz-api}
+    spec:
+      containers:
+        - name: api
+          image: prometeusz:latest
+          command: ["uvicorn", "interfaces.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+          envFrom:
+            - configMapRef: {name: prometeusz-config}
+            - secretRef: {name: prometeusz-secrets}
+          resources:
+            requests: {cpu: "500m", memory: "512Mi"}
+            limits: {cpu: "2000m", memory: "2Gi"}
+          livenessProbe:
+            httpGet: {path: /health, port: 8000}
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            httpGet: {path: /health, port: 8000}
+            periodSeconds: 10
+            failureThreshold: 2
